@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Joi = require('joi');
 const { logger } = require('../logger/logger');
 const fs = require('fs');
+const path = require('path');
 
 const userSchema = Joi.object({
     name: Joi.string().trim().required(),
@@ -93,6 +94,34 @@ exports.getUserController = async (req, res) => {
         res.status(200).json(user);
     } catch (err) {
         logger.error('Error fetching user:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+exports.getProfilePhotoController = async (req, res) => {
+    const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '../uploads/profilephoto');
+    // Validate user ID param
+    const idSchema = Joi.string().length(24).hex().required();
+    const { error } = idSchema.validate(req.params.id);
+    if (error) {
+        logger.info('Invalid user ID for profile photo: ' + req.params.id);
+        return res.status(400).json({ error: 'Invalid user ID' });
+    }
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user || !user.profilePhoto) {
+            logger.info('Profile photo not found for user: ' + req.params.id);
+            return res.status(404).json({ error: 'Profile photo not found' });
+        }
+        const photoPath = path.resolve(uploadsDir, user.profilePhoto);
+        logger.debug('Profile photo path: ' + photoPath);
+        if (!fs.existsSync(photoPath)) {
+            logger.info('Profile photo file missing: ' + photoPath);
+            return res.status(404).json({ error: 'Profile photo file not found' });
+        }
+        res.sendFile(photoPath);
+    } catch (err) {
+        logger.error('Error fetching profile photo:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
