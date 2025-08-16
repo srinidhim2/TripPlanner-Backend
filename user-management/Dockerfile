@@ -13,7 +13,7 @@ COPY . .
 
 # Environment variables
 ENV USER_SERVER_PORT=3003
-ENV USER_DB_URL=mongodb://admin:admin123@mongo:27017/user_management
+ENV USER_DB_URL=mongodb://mongo:27017/user_management
 ENV UPLOADS_DIR=uploads/profilephoto
 
 # Expose port (from .env or default 3000)

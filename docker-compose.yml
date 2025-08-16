@@ -7,20 +7,40 @@ services:
     container_name: user-service
     ports:
       - "3003:3003"
+    # Environment variables now set in Dockerfile
     volumes:
       - ./user-management/uploads:/app/uploads
       - ./user-management/logs:/app/logs
     depends_on:
       - mongo
+      - kafka
   mongo:
     image: mongo:6.0
     container_name: mongo
     ports:
       - "27019:27017"
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=admin123
     volumes:
       - mongo-data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+  kafka:
+    image: bitnami/kafka:3.6.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - zookeeper
+  zookeeper:
+    image: bitnami/zookeeper:3.8.1
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
 volumes:
   mongo-data:
