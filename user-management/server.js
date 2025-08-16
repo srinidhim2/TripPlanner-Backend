@@ -15,7 +15,8 @@ connectDB();
 
 // Middleware
 app.use(express.json());
-logger.debug('Express JSON middleware enabled');
+app.use(express.urlencoded({ extended: true })); // For parsing form-data
+logger.debug('Express JSON and URL-encoded middleware enabled');
 
 // HTTP request logging
 app.use(morgan('combined', {
@@ -29,7 +30,7 @@ app.use(morgan('combined', {
 logger.debug('Morgan HTTP logger enabled (file and console)');
 
 // API routes
-app.use('/api', api); // Use the API router defined in app.js
+app.use('/', api); // Use the API router defined in app.js
 logger.debug('API routes mounted');
 
 // Server port

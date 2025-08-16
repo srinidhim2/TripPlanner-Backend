@@ -29,7 +29,8 @@ const userSchema = new mongoose.Schema({
         enum: ['male', 'female', 'other']
     },
     profilePhoto: {
-        type: String // URL or file path
+        type: String, // filename
+        default: null // default value None
     }
 }, {
     timestamps: true

@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Joi = require('joi');
 const { logger } = require('../logger/logger');
+const fs = require('fs');
 
 const userSchema = Joi.object({
     name: Joi.string().trim().required(),
@@ -14,25 +15,30 @@ const userSchema = Joi.object({
 exports.createUserController = async (req, res) => {
     logger.debug('Received request to create user: ' + JSON.stringify(req.body));
     // Validate request body
-    const { error, value } = userSchema.validate(req.body);
-    if (error) {
-        logger.info('User validation failed: ' + error.details[0].message);
-        logger.debug('Validation error details: ' + JSON.stringify(error.details));
-        return res.status(400).json({ error: error.details[0].message });
+    const result = userSchema.validate(req.body);
+    logger.debug('Validation result: ' + JSON.stringify(result));
+    if (result.error) {
+        logger.info('User validation failed: ' + result.error.details[0].message);
+        logger.debug('Validation error details: ' + JSON.stringify(result.error.details));
+        return res.status(400).json({ error: result.error.details[0].message });
     }
+    // Use result.value directly
 
     try {
-        logger.debug('Checking if user already exists for email: ' + value.email);
+        logger.debug('Checking if user already exists for email: ' + result.value.email);
         // Check if user already exists
-        const existingUser = await User.isExist(value.email);
+        const existingUser = await User.isExist(result.value.email);
         if (existingUser) {
-            logger.info('User already exists: ' + value.email);
+            logger.info('User already exists: ' + result.value.email);
             logger.debug('Existing user found: ' + JSON.stringify(existingUser));
             return res.status(409).json({ error: 'User already exists' });
         }
         logger.debug('No existing user found, proceeding to create user.');
-        // Create new user
-        const user = new User(value);
+
+        // Create new user (no profile photo upload)
+        const user = new User({
+            ...result.value
+        });
         await user.save();
         logger.info('User created: ' + user.email);
         logger.debug('Created user details: ' + JSON.stringify(user));
@@ -40,6 +46,53 @@ exports.createUserController = async (req, res) => {
     } catch (err) {
         logger.error('Error creating user:', err);
         logger.debug('Error stack: ' + err.stack);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+exports.uploadProfilePhotoController = async (req, res) => {
+    const userId = req.params.id;
+    try {
+        if (!req.file) {
+            logger.info('No profile photo uploaded');
+            return res.status(400).json({ error: 'No profile photo uploaded' });
+        }
+        const photoFilename = req.file.filename;
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { profilePhoto: photoFilename },
+            { new: true }
+        );
+        if (!user) {
+            logger.info('User not found for profile photo upload: ' + userId);
+            return res.status(404).json({ error: 'User not found' });
+        }
+        logger.info('Profile photo uploaded for user: ' + user.email);
+        res.status(200).json({ message: 'Profile photo uploaded', user });
+    } catch (err) {
+        logger.error('Error uploading profile photo:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+exports.getUserController = async (req, res) => {
+    // Validate user ID param
+    const idSchema = Joi.string().length(24).hex().required();
+    const { error } = idSchema.validate(req.params.id);
+    if (error) {
+        logger.info('Invalid user ID: ' + req.params.id);
+        return res.status(400).json({ error: 'Invalid user ID' });
+    }
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            logger.info('User not found: ' + req.params.id);
+            return res.status(404).json({ error: 'User not found' });
+        }
+        logger.info('User fetched: ' + user.email);
+        res.status(200).json(user);
+    } catch (err) {
+        logger.error('Error fetching user:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 };

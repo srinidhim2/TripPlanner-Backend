@@ -11,12 +11,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "colors": "^1.4.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "joi": "^18.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.17.1",
     "morgan": "^1.10.1",
+    "multer": "^2.0.2",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
   },

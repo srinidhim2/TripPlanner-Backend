@@ -1,6 +1,7 @@
 node_modules
 .env
 logs
+uploads
 # Dependency directories
 /bower_components
 /jspm_packages
