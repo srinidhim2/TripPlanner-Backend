@@ -20,7 +20,7 @@ const authMiddleware = async (req, res, next) => {
         }
         logger.debug(token);
         const cleanedToken = token.trim();
-        const decoded = jwt.verify(cleanedToken, process.env.JWT_SECRET);
+        const decoded = await jwt.verify(cleanedToken, process.env.JWT_SECRET);
         logger.debug('Decoded token:', decoded);
 
         if (!decoded || !decoded.id) {
@@ -33,7 +33,7 @@ const authMiddleware = async (req, res, next) => {
         }
 
         req.user = user;
-
+        logger.debug('Authenticated user:', user._id);
         next();
     } catch (error) {
         res.status(500).json({ message: error.message });

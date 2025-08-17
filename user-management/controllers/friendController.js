@@ -9,11 +9,12 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const FriendRequest = require('../models/FriendRequest');
 require('dotenv').config();
+const HttpError = require('../utils/httpError');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 const FRIEND_REQUEST_TOPIC = process.env.FRIEND_REQUEST_TOPIC
 
-exports.sendFriendRequestController = async (req, res) => {
+exports.sendFriendRequestController = async (req, res, next) => {
     try {
         // Get partyA from token
         const partyA = req.user._id;
@@ -71,4 +72,51 @@ exports.sendFriendRequestController = async (req, res) => {
         next(err);
         logger.error('Error sending friend request:', err);
     }
+};
+
+exports.getReceivedFriendRequestsController = async (req, res, next) => {
+  try {
+    const myId = req.user._id;
+    console.log('Received user ID:', myId);
+    logger.debug('Fetching received friend requests for user:', myId);
+    const requests = await FriendRequest.find({
+      partyB: myId,
+      status: 'pending',
+    }).populate('partyA', 'name email profilePhoto');
+    res.status(200).json({ requests });
+  } catch (err) {
+    logger.error('Error fetching received friend requests:', err);
+    next(err);
+  }
+};
+
+
+exports.respondToFriendRequestController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body;
+    const myId = req.user._id;
+
+    if (!['accept', 'reject'].includes(action)) {
+      res.status(400);
+      throw new Error('Action must be "accept" or "reject".');
+    }
+
+    const friendRequest = await FriendRequest.findOne({ _id: id, partyB: myId });
+
+    if (!friendRequest || friendRequest.status !== 'pending') {
+      res.status(404);
+      throw new Error('Pending friend request not found.');
+    }
+
+    friendRequest.status = action === 'accept' ? 'accepted' : 'rejected';
+    await friendRequest.save();
+
+    res.status(200).json({
+      message: `Friend request ${action}ed.`,
+      friendRequest
+    });
+  } catch (err) {
+    next(err);
+  }
 };

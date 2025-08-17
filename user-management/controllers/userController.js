@@ -137,6 +137,7 @@ exports.uploadProfilePhotoController = async (req, res) => {
 };
 
 exports.getUserController = async (req, res) => {
+    console.log('Fetching user with ID:', req.params.id);
     // Validate user ID param
     const idSchema = Joi.string().length(24).hex().required();
     const { error } = idSchema.validate(req.params.id);
