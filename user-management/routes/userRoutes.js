@@ -1,9 +1,9 @@
 const express = require('express');
 const userRouter = express.Router();
-const { createUserController, uploadProfilePhotoController, getUserController, getProfilePhotoController, loginController, updateUserController, sendFriendRequestController } = require('../controllers/userController');
+const { createUserController, uploadProfilePhotoController, getUserController, getProfilePhotoController, loginController, updateUserController } = require('../controllers/userController');
 const uploadProfilePhoto = require('../middlewares/uploadProfilePhoto');
 const authMiddleware = require('../middlewares/authMiddleware');
-
+const { sendFriendRequestController } = require('../controllers/friendController');
 // Login route (no auth)
 userRouter.post('/login', loginController);
 
