@@ -18,7 +18,12 @@ exports.sendFriendRequestController = async (req, res, next) => {
     try {
         // Get partyA from token
         const partyA = req.user._id;
-
+        const userA = await User.findById(partyA);
+        if(userA.friends.includes(req.body.partyB)) {
+            throw new HttpError('You are already friends with this user.', 400);
+        }
+        logger.debug('Party A:', partyA);
+        logger.debug('Party B:', req.body.partyB);
         // Validate input
         const schema = Joi.object({
             partyB: Joi.string().length(24).hex().required(), // MongoDB ObjectId
@@ -63,7 +68,11 @@ exports.sendFriendRequestController = async (req, res, next) => {
         });
         await friendRequest.save();
         console.log('TOPIC:', FRIEND_REQUEST_TOPIC);
-        await sendKafkaMessage(FRIEND_REQUEST_TOPIC,friendRequest);
+        await sendKafkaMessage(FRIEND_REQUEST_TOPIC,{
+            category:'friend-request',
+            event: 'request',
+            friendRequest
+        });
         res.status(201).json({
             message: "Friend request sent.",
             friendRequest
@@ -121,7 +130,12 @@ exports.respondToFriendRequestController = async (req, res, next) => {
       await User.findByIdAndUpdate(partyA, { $addToSet: { friends: partyB } });
       await User.findByIdAndUpdate(partyB, { $addToSet: { friends: partyA } });
     }
-
+    // friendRequest.type = 'friend_request_response';
+    await sendKafkaMessage(FRIEND_REQUEST_TOPIC,{
+        category:'friend-request',
+        event: 'response',
+        friendRequest
+    });
     res.status(200).json({
       message: `Friend request ${action}ed.`,
       friendRequest
