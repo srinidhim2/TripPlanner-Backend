@@ -8,7 +8,7 @@ const connectDB = require('./config/db/db');
 const api = require('./app');
 require('dotenv').config();
 const cookieParser = require('cookie-parser');
-const handleErrors = require('./middleware/errorHandler');
+const handleErrors = require('./middlewares/error-handler');
 app.use(cookieParser());
 
 // Logging and startup
