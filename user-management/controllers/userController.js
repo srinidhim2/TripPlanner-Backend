@@ -1,5 +1,5 @@
 const BlacklistedToken = require('../models/BlacklistedToken');
-
+const { sendKafkaMessage } = require('../utils/kafkaProducer');
 const User = require('../models/User');
 const Joi = require('joi');
 const { logger } = require('../logger/logger');
@@ -8,8 +8,10 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const FriendRequest = require('../models/FriendRequest');
+require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
+const FRIEND_REQUEST_TOPIC = process.env.FRIEND_REQUEST_TOPIC
 
 const userSchema = Joi.object({
     name: Joi.string().trim().required(),
@@ -279,7 +281,8 @@ exports.sendFriendRequestController = async (req, res) => {
             status: 'pending'
         });
         await friendRequest.save();
-
+        console.log('TOPIC:', FRIEND_REQUEST_TOPIC);
+        await sendKafkaMessage(FRIEND_REQUEST_TOPIC,friendRequest);
         res.status(201).json({
             message: "Friend request sent.",
             friendRequest
