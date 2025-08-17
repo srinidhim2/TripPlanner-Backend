@@ -1,11 +1,11 @@
 const express = require('express');
 const friendRouter = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
-const { sendFriendRequestController, getReceivedFriendRequestsController, respondToFriendRequestController } = require('../controllers/friendController');
+const { sendFriendRequestController, getReceivedFriendRequestsController, respondToFriendRequestController, getMyFriendsController } = require('../controllers/friendController');
 
 //Friendship routes
-friendRouter.post('/send', authMiddleware,sendFriendRequestController);
-friendRouter.get('/show', authMiddleware, getReceivedFriendRequestsController)
-friendRouter.patch('/respond/:id',authMiddleware, respondToFriendRequestController);
-
+friendRouter.post('/sendRequest', authMiddleware,sendFriendRequestController);
+friendRouter.get('/showRequests', authMiddleware, getReceivedFriendRequestsController)
+friendRouter.patch('/respondToRequest/:id',authMiddleware, respondToFriendRequestController);
+friendRouter.get('/showFriends', authMiddleware, getMyFriendsController); // Assuming you have a controller for this
 module.exports = friendRouter;

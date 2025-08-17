@@ -8,5 +8,5 @@ const api = express.Router();
 
 // Mount userRouter under /user
 api.use('/user', userRouter);
-api.use('/friend-request', friendRouter); // Mount friendRouter under /friends
+api.use('/friend', friendRouter); // Mount friendRouter under /friends
 module.exports = api;

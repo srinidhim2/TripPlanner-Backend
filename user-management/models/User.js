@@ -36,10 +36,10 @@ const userSchema = new mongoose.Schema({
         type: String, // filename
         default: null // default value None
     },
-    friends: {
-        type: [mongoose.Schema.Types.ObjectId], // Array of user IDs (as strings)
-        default: [] // Default to an empty array        
-    }},
+    friends: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+    }]},
     {
         timestamps: true 
     }   

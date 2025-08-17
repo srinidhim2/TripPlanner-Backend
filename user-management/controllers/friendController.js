@@ -112,6 +112,16 @@ exports.respondToFriendRequestController = async (req, res, next) => {
     friendRequest.status = action === 'accept' ? 'accepted' : 'rejected';
     await friendRequest.save();
 
+    // If accepted, update both users' friends arrays
+    if (action === 'accept') {
+      const partyA = friendRequest.partyA;
+      const partyB = friendRequest.partyB;
+
+      // $addToSet prevents duplicate entries
+      await User.findByIdAndUpdate(partyA, { $addToSet: { friends: partyB } });
+      await User.findByIdAndUpdate(partyB, { $addToSet: { friends: partyA } });
+    }
+
     res.status(200).json({
       message: `Friend request ${action}ed.`,
       friendRequest
@@ -120,3 +130,21 @@ exports.respondToFriendRequestController = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getMyFriendsController = async (req, res, next) => {
+  try {
+    const myId = req.user._id;
+    const user = await User.findById(myId).populate('friends', 'name email gender profilePhoto');
+    if (!user) {
+      res.status(404);
+      throw new Error("User not found.");
+    }
+    res.status(200).json({
+      friends: user.friends  // This will be an array of user objects, not just IDs!
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
