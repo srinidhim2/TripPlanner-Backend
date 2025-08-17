@@ -1,18 +1,25 @@
 const express = require('express');
 const userRouter = express.Router();
-const { createUserController, uploadProfilePhotoController, getUserController, getProfilePhotoController } = require('../controllers/userController');
+const { createUserController, uploadProfilePhotoController, getUserController, getProfilePhotoController, loginController } = require('../controllers/userController');
 const uploadProfilePhoto = require('../middlewares/uploadProfilePhoto');
+const authMiddleware = require('../middlewares/authMiddleware');
+const cookieParser = require('cookie-parser');
 
-// POST /user - Create a new user
+userRouter.use(cookieParser());
+
+// Login route (no auth)
+userRouter.post('/login', loginController);
+
+// POST /user - Create a new user (protected)
 userRouter.post('/', createUserController);
 
-// POST /user/:id/photo - Upload profile photo for a user
-userRouter.post('/:id/photo', uploadProfilePhoto.single('profilePhoto'), uploadProfilePhotoController);
+// POST /user/:id/photo - Upload profile photo for a user (protected)
+userRouter.post('/:id/photo', authMiddleware, uploadProfilePhoto.single('profilePhoto'), uploadProfilePhotoController);
 
-// GET /user/:id - Get user by ID
-userRouter.get('/:id', getUserController);
+// GET /user/:id - Get user by ID (protected)
+userRouter.get('/:id', authMiddleware, getUserController);
 
-// GET /user/:id/photo - Get profile photo for a user
-userRouter.get('/:id/photo', getProfilePhotoController);
+// GET /user/:id/photo - Get profile photo for a user (protected)
+userRouter.get('/:id/photo', authMiddleware, getProfilePhotoController);
 
 module.exports = userRouter;
