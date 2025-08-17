@@ -25,19 +25,22 @@ exports.sendFriendRequestController = async (req, res) => {
         });
         const { error } = schema.validate(req.body);
         if (error) {
-            return res.status(400).json({ error: error.details[0].message });
+            // return res.status(400).json({ error: error.details[0].message });
+            throw new HttpError(error.details[0].message, 400);
         }
         const partyB = req.body.partyB;
 
         // Prevent sending to self
         if (partyA.toString() === partyB) {
-            return res.status(400).json({ error: "Cannot send friend request to yourself." });
+            // return res.status(400).json({ error: "Cannot send friend request to yourself." });
+            throw new HttpError('Cannot send friend request to yourself.', 400);
         }
 
         // Check if partyB user exists
         const userB = await User.findById(partyB);
         if (!userB) {
-            return res.status(404).json({ error: "User to be friended does not exist." });
+            // return res.status(404).json({ error: "User to be friended does not exist." });
+            throw new HttpError('User to be friended does not exist.', 404);
         }
 
         // Prevent duplicate requests (pending/accepted)
@@ -47,7 +50,8 @@ exports.sendFriendRequestController = async (req, res) => {
             status: { $in: ['pending', 'accepted'] }
         });
         if (existing) {
-            return res.status(409).json({ error: "Friend request already exists or accepted." });
+            // return res.status(409).json({ error: "Friend request already exists or accepted." });
+            throw new HttpError('Friend request already exists or accepted.', 409);
         }
 
         // Create friend request
@@ -64,6 +68,7 @@ exports.sendFriendRequestController = async (req, res) => {
             friendRequest
         });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
+        logger.error('Error sending friend request:', err);
     }
 };

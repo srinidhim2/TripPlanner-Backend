@@ -8,7 +8,7 @@ const connectDB = require('./config/db/db');
 const api = require('./app');
 require('dotenv').config();
 const cookieParser = require('cookie-parser');
-
+const handleErrors = require('./middleware/errorHandler');
 app.use(cookieParser());
 
 // Logging and startup
@@ -45,6 +45,8 @@ app.get('/', (req, res) => {
     res.send('User Management Server is running');
 });
 
+app.use(handleErrors); // Error handling middleware
+logger.debug('Error handling middleware registered');
 // Start server
 app.listen(PORT, () => {
     logger.info(`Server is listening on port ${PORT}`);

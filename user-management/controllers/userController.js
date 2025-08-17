@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const FriendRequest = require('../models/FriendRequest');
 require('dotenv').config();
+const HttpError = require('../utils/httpError');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 const FRIEND_REQUEST_TOPIC = process.env.FRIEND_REQUEST_TOPIC
@@ -54,7 +55,7 @@ exports.updateUserController = async (req, res) => {
 
         res.status(200).json({ message: 'User updated', user: updatedUser });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        next(error);
     }
 };
 
