@@ -7,6 +7,9 @@ const { logger } = require('./logger/logger');
 const connectDB = require('./config/db/db');
 const api = require('./app');
 require('dotenv').config();
+const cookieParser = require('cookie-parser');
+
+app.use(cookieParser());
 
 // Logging and startup
 logger.info('Starting User Management Server...');

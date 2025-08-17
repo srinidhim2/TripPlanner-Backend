@@ -35,10 +35,15 @@ const userSchema = new mongoose.Schema({
     profilePhoto: {
         type: String, // filename
         default: null // default value None
-    }
-}, {
-    timestamps: true
-});
+    },
+    friends: {
+        type: [mongoose.Schema.Types.ObjectId], // Array of user IDs (as strings)
+        default: [] // Default to an empty array        
+    }},
+    {
+        timestamps: true 
+    }   
+);
 
 userSchema.statics.isExist = async function (email) {
     const user = await this.findOne({ email: email });

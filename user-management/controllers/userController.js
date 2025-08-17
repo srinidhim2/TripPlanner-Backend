@@ -1,3 +1,5 @@
+const BlacklistedToken = require('../models/BlacklistedToken');
+
 const User = require('../models/User');
 const Joi = require('joi');
 const { logger } = require('../logger/logger');
@@ -5,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const FriendRequest = require('../models/FriendRequest');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
@@ -17,6 +20,42 @@ const userSchema = Joi.object({
     gender: Joi.string().valid('male', 'female', 'other').required(),
     profilePhoto: Joi.string().optional()
 });
+const allowedFields = ['name', 'dateOfBirth', 'phone', 'gender', 'profilePhoto'];
+
+exports.updateUserController = async (req, res) => {
+    try {
+        const userId = req.user._id; // Auth middleware attaches user to req.user
+        const updates = {};
+
+        // Build updates object based on payload and allowed fields
+        allowedFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updates[field] = req.body[field];
+            }
+        });
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ message: 'No valid fields to update' });
+        }
+
+        // (Optional) Validate the updates here with Joi before saving
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updates },
+            { new: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({ message: 'User updated', user: updatedUser });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 
 exports.createUserController = async (req, res) => {
     logger.debug('Received request to create user: ' + JSON.stringify(req.body));
@@ -145,53 +184,107 @@ exports.getProfilePhotoController = async (req, res) => {
 };
 
 exports.loginController = async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password required' });
-    }
-    // Password validation: length and type
-    if (typeof password !== 'string' || password.length < 6 || password.length > 128) {
-        return res.status(400).json({ error: 'Password must be between 6 and 128 characters.' });
-    }
-    try {
-        logger.debug('Login attempt for email: ' + email);
-        const user = await User.findOne({ email });
+     try {
+        const { email, password } = req.body;
+        const user = await User
+            .findOne({ email })
+            .select('+password');
         if (!user) {
-            logger.info('Login failed: user not found for email ' + email);
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(400).json({ message: 'Invalid email or password' });
         }
-        logger.debug('User found for login: ' + JSON.stringify(user));
-        // Use bcrypt to compare password
-        const valid = await bcrypt.compare(password, user.password);
-        if (!valid) {
-            logger.info('Login failed: invalid password for email ' + email);
-            return res.status(401).json({ error: 'Invalid credentials' });
+        const isMatch = await bcrypt.compare(password, user.password);
+        console.log(isMatch)
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Invalid email or password' });
         }
-        logger.info('Login successful for user: ' + email);
-        const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, { expiresIn: '1d' });
-        res.cookie('token', token, { httpOnly: true, sameSite: 'strict' });
-        res.status(201).json({ message: 'Login successful', token });
-    } catch (err) {
-        logger.error('Error during login:', err);
-        res.status(500).json({ error: 'Internal server error' });
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        delete user._doc.password;
+        res.cookie('token', token);
+        res.send({ token });
+    } catch (error) {
+        next(error)
     }
 };
 
-exports.userAuthMiddleware = (req, res, next) => {
+exports.logoutController = async (req, res) => {
     let token = null;
     if (req.cookies && req.cookies.token) {
+        console.log('Token found in cookies');
+        logger.debug('Token found in cookies');
         token = req.cookies.token;
     } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
         token = req.headers.authorization.split(' ')[1];
     }
     if (!token) {
-        return res.status(401).json({ error: 'Authentication required' });
+        return res.status(400).json({ error: 'No token provided for logout' });
     }
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        req.user = decoded;
-        next();
+        // Decode token to get expiry
+        const decoded = jwt.decode(token);
+        if (!decoded || !decoded.exp) {
+            return res.status(400).json({ error: 'Invalid token' });
+        }
+        const expiresAt = new Date(decoded.exp * 1000);
+        await BlacklistedToken.create({ token, expiresAt });
+        res.clearCookie('token');
+        logger.info('Logout successful, token blacklisted');
+        res.status(200).json({ message: 'Logout successful' });
     } catch (err) {
-        return res.status(401).json({ error: 'Invalid or expired token' });
+        logger.error('Error during logout:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+exports.sendFriendRequestController = async (req, res) => {
+    try {
+        // Get partyA from token
+        const partyA = req.user._id;
+
+        // Validate input
+        const schema = Joi.object({
+            partyB: Joi.string().length(24).hex().required(), // MongoDB ObjectId
+            partyA: Joi.string().length(24).hex().optional() // For logging; actual used from token
+        });
+        const { error } = schema.validate(req.body);
+        if (error) {
+            return res.status(400).json({ error: error.details[0].message });
+        }
+        const partyB = req.body.partyB;
+
+        // Prevent sending to self
+        if (partyA.toString() === partyB) {
+            return res.status(400).json({ error: "Cannot send friend request to yourself." });
+        }
+
+        // Check if partyB user exists
+        const userB = await User.findById(partyB);
+        if (!userB) {
+            return res.status(404).json({ error: "User to be friended does not exist." });
+        }
+
+        // Prevent duplicate requests (pending/accepted)
+        const existing = await FriendRequest.findOne({
+            partyA,
+            partyB,
+            status: { $in: ['pending', 'accepted'] }
+        });
+        if (existing) {
+            return res.status(409).json({ error: "Friend request already exists or accepted." });
+        }
+
+        // Create friend request
+        const friendRequest = new FriendRequest({
+            partyA,
+            partyB,
+            status: 'pending'
+        });
+        await friendRequest.save();
+
+        res.status(201).json({
+            message: "Friend request sent.",
+            friendRequest
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 };

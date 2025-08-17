@@ -1,11 +1,8 @@
 const express = require('express');
 const userRouter = express.Router();
-const { createUserController, uploadProfilePhotoController, getUserController, getProfilePhotoController, loginController } = require('../controllers/userController');
+const { createUserController, uploadProfilePhotoController, getUserController, getProfilePhotoController, loginController, updateUserController, sendFriendRequestController } = require('../controllers/userController');
 const uploadProfilePhoto = require('../middlewares/uploadProfilePhoto');
 const authMiddleware = require('../middlewares/authMiddleware');
-const cookieParser = require('cookie-parser');
-
-userRouter.use(cookieParser());
 
 // Login route (no auth)
 userRouter.post('/login', loginController);
@@ -21,5 +18,13 @@ userRouter.get('/:id', authMiddleware, getUserController);
 
 // GET /user/:id/photo - Get profile photo for a user (protected)
 userRouter.get('/:id/photo', authMiddleware, getProfilePhotoController);
+const { logoutController } = require('../controllers/userController');
+// Logout route (protected)
+userRouter.post('/logout', authMiddleware, logoutController);
+
+userRouter.patch('/',authMiddleware, updateUserController)
+
+//Friendship routes
+userRouter.post('/friend-requests', authMiddleware,sendFriendRequestController);
 
 module.exports = userRouter;

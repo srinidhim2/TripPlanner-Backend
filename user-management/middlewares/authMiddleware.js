@@ -1,23 +1,43 @@
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
+const blacklisttokenModel = require('../models/BlacklistedToken');
+const userModel = require('../models/User');
+const { logger } = require('../logger/logger');
 
-const authMiddleware = (req, res, next) => {
-    let token = null;
-    if (req.cookies && req.cookies.token) {
-        token = req.cookies.token;
-    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-        token = req.headers.authorization.split(' ')[1];
-    }
-    if (!token) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
+const authMiddleware = async (req, res, next) => {
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        req.user = decoded;
+        const authHeader = req.headers.authorization;
+        const token =  req.cookies.token || (authHeader && authHeader.split(' ')[1])
+        console.log('----------',token, '----------');
+        if (!token) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const isBlacklisted = await blacklisttokenModel.find({ token });
+
+        if (isBlacklisted.length) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        logger.debug(token);
+        const cleanedToken = token.trim();
+        const decoded = jwt.verify(cleanedToken, process.env.JWT_SECRET);
+        logger.debug('Decoded token:', decoded);
+
+        if (!decoded || !decoded.id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        const user = await userModel.findById(decoded.id);
+
+        if (!user) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        req.user = user;
+
         next();
-    } catch (err) {
-        return res.status(401).json({ error: 'Invalid or expired token' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
-};
+}
 
 module.exports = authMiddleware;
