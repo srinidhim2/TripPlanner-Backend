@@ -14,6 +14,19 @@ services:
     depends_on:
       - mongo
       - kafka
+  
+  notification-service:
+    build:
+      context: ./notification-service   # Adjust to your notification service folder
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "3004:3004"
+    volumes:
+      - ./notification-service/logs:/usr/src/app/logs
+    depends_on:
+      - mongo
+      - kafka
   mongo:
     image: mongo:6.0
     container_name: mongo
@@ -21,7 +34,6 @@ services:
       - "27019:27017"
     volumes:
       - mongo-data:/data/db
-      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
   kafka:
     image: bitnami/kafka:3.6.0
     container_name: kafka
