@@ -19,7 +19,9 @@ runConsumer(process.env.FRIEND_REQUEST_TOPIC, async (event) => {
       throw new Error('Failed to save notification');
     }
     console.log('Notification saved:', notification);
+    logger.info('Notification saved:', notification);
   } catch (error) {
     console.error('Failed to save notification:', error);
+    logger.error('Failed to save notification:', error);
   }
 });
