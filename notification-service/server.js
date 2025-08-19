@@ -4,8 +4,7 @@ const { logger } = require('./logger/logger');
 const app = express();
 const connectDB = require('./config/db/db');
 require('dotenv').config();
-require('./controller/notificationController'); // Import the notification controller to set up Kafka consumer
-
+require('./controller/kafkaController') // Import Kafka controller for handling Kafka messages
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For parsing form-data
 app.use(morgan('combined', {

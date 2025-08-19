@@ -6,7 +6,7 @@ const friendRequestSchema = new Schema({
   partyB: { type: Schema.Types.ObjectId, ref: 'User', required: true }, // receiver
   status: {
     type: String,
-    enum: ['pending', 'accepted', 'rejected'],
+    enum: ['pending', 'accepted', 'rejected', 'cancelled'],
     default: 'pending',
     required: true
   }

@@ -15,8 +15,12 @@ async function runConsumer(topic, messageHandler) {
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
       // message.value is a Buffer
-      const parsedValue = JSON.parse(message.value.toString());
-      await messageHandler(parsedValue);
+        try {
+            const parsedValue = JSON.parse(message.value.toString());
+            await messageHandler(parsedValue);
+        } catch (err) {
+            console.error('Failed to parse message:', message.value.toString(), err);
+        }
     },
   });
 }

@@ -162,3 +162,52 @@ exports.getMyFriendsController = async (req, res, next) => {
 };
 
 
+exports.unfriendController = async (req, res, next) => {
+  try {
+    const myId = req.user._id;            // Current authenticated user
+    const otherUserId = req.params.id; // The friend to unfriend (passed as route param)
+
+    if (!otherUserId) {
+      return res.status(400).json({ error: "Invalid user ID to unfriend." });
+    }
+    // Verify other user exists
+    const otherUser = await User.findById(otherUserId);
+    if (!otherUser) {
+      return res.status(404).json({ error: "User to unfriend not found." });
+    }
+    // Remove otherUserId from my friends list
+    const updatedUser = await User.findByIdAndUpdate(
+      myId,
+      { $pull: { friends: otherUserId } },  // Removes the friend
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "Authenticated user not found." });
+    }
+
+    // Remove myId from otherUser's friends list
+    await User.findByIdAndUpdate(
+      otherUserId,
+      { $pull: { friends: myId } }
+    );
+    const friendRequestUpdate = await FriendRequest.findOneAndUpdate(
+      {
+        $or: [
+          { partyA: myId, partyB: otherUserId },
+          { partyA: otherUserId, partyB: myId }
+        ],
+        status: { $in: ['pending', 'accepted'] }  // Only update if request is active or accepted
+      },
+      { status: 'cancelled' }
+    );
+    if(!friendRequestUpdate) {
+      console.log('No active or accepted friend request found to update.');
+      logger.info('No active or accepted friend request found to update.');
+      return res.status(404).json({ error: "No active or accepted friend request found to update." });
+    }
+    res.status(200).json({ message: "Successfully unfriended the user." });
+  } catch (err) {
+    next(err);
+  }
+};
