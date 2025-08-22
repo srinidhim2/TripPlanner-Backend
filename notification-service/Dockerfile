@@ -21,6 +21,6 @@ ENV NOTIFICATION_DB_URL=mongodb://mongo:27017/user_management
 ENV FRIEND_REQUEST_TOPIC=friend-request
 ENV NOTIFICATION_SERVER_PORT=3004
 ENV LOG_LEVEL=debug
-
+ENV USER_SERVICE_URL=http://user-service:3003
 # Start your app
 CMD ["node", "server.js"]

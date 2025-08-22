@@ -1,6 +1,7 @@
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
 const { logger } = require("../logger/logger");
+require("dotenv").config();
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -35,7 +36,13 @@ const authMiddleware = async (req, res, next) => {
     }
 
     // Verify user exists in user-service
-    const url = `http://user-service:3003/user/${decoded.id}`;
+    console.log('URL:', process.env.USER_SERVICE_URL);
+    if (!process.env.USER_SERVICE_URL) {
+      console.error("❌ USER_SERVICE_URL is not defined in environment variables");
+      logger.error("USER_SERVICE_URL is not defined");
+      return res.status(500).json({ success: false, message: "Service configuration error" });
+    }
+    const url = `${process.env.USER_SERVICE_URL}/user/${decoded.id}`;
     console.log(`🔍 Verifying user from user-service: ${url}`);
     logger.info(`Verifying user from user-service`, { userId: decoded.id });
 
