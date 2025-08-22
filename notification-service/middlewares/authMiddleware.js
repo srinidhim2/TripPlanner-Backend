@@ -1,0 +1,60 @@
+const axios = require("axios");
+const jwt = require("jsonwebtoken");
+const { logger } = require("../logger/logger");
+
+const authMiddleware = async (req, res, next) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader) {
+      console.warn("⚠️ No authorization header provided");
+      logger.warn("No authorization header provided");
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      console.warn("⚠️ Token missing in authorization header");
+      logger.warn("Token missing in authorization header");
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    // Decode token (without verifying here since user-service handles validation)
+    let decoded;
+    try {
+      decoded = jwt.decode(token);
+    } catch (err) {
+      console.error("❌ Invalid JWT token");
+      logger.error("Invalid JWT token", { error: err.message });
+      return res.status(401).json({ success: false, message: "Invalid token" });
+    }
+
+    if (!decoded?.id) {
+      console.warn("⚠️ Token does not contain user id");
+      logger.warn("Token does not contain user id");
+      return res.status(401).json({ success: false, message: "Invalid token" });
+    }
+
+    // Verify user exists in user-service
+    const url = `http://user-service:3003/user/${decoded.id}`;
+    console.log(`🔍 Verifying user from user-service: ${url}`);
+    logger.info(`Verifying user from user-service`, { userId: decoded.id });
+
+    const user = await axios.get(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    req.user = user
+    // Attach userId to request for downstream usage
+    req.userId = decoded.id;
+
+    console.log(`✅ User verified: ${decoded.id}`);
+    logger.info(`User verified`, { userId: decoded.id });
+
+    next();
+  } catch (error) {
+    console.error("❌ Error in authMiddleware:", error.message);
+    logger.error("Error in authMiddleware", { error: error.message });
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+};
+
+module.exports = authMiddleware;

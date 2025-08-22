@@ -3,8 +3,9 @@ const morgan = require('morgan');
 const { logger } = require('./logger/logger');
 const app = express();
 const connectDB = require('./config/db/db');
+const notificationRouter = require('./routes/notificationRouter');
 require('dotenv').config();
-require('./controller/kafkaController') // Import Kafka controller for handling Kafka messages
+require('./controllers/kafkaController') // Import Kafka controller for handling Kafka messages
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For parsing form-data
 app.use(morgan('combined', {
@@ -19,6 +20,7 @@ app.listen(process.env.NOTIFICATION_SERVER_PORT || 3004, () => {
     logger.info(`Notification Service is listening on port ${process.env.NOTIFICATION_SERVER_PORT || 3004}`);
     console.log(`Notification Service is listening on port ${process.env.NOTIFICATION_SERVER_PORT || 3004}`);
 });
+app.use('/notifications', notificationRouter);
 // Connect to MongoDB
 logger.info('Starting Notification Service Server...');
 logger.debug('Attempting to connect to MongoDB...');

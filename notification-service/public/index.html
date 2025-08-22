@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple WebSocket Notification Client</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+  <h1>WebSocket Notification Client</h1>
+  <label>Your User ID:</label>
+  <input id="userIdInput" type="text" placeholder="Enter your User ID" />
+  <button id="joinBtn">Join Notification Room</button>
+
+  <script>
+    const socket = io('http://localhost:3004');
+
+    document.getElementById('joinBtn').onclick = function() {
+      const userId = document.getElementById('userIdInput').value.trim();
+      if (userId) {
+        socket.emit('join', userId);
+        console.log('Joined WebSocket room for user:', userId);
+      } else {
+        alert('Please enter your User ID.');
+      }
+    };
+
+    socket.on('notification', (data) => {
+      console.log('Notification received:', data.notification);
+    });
+  </script>
+</body>
+</html>
