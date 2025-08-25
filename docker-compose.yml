@@ -55,5 +55,21 @@ services:
       - "2181:2181"
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
+
+  trip-service:
+    build:
+      context: ./trip-service
+      dockerfile: Dockerfile
+    container_name: trip-service
+    ports:
+      - "3005:3005"          # Map exposed port to host port
+    volumes:
+      - ./trip-service/uploads:/app/uploads    # if you have upload directory
+      - ./trip-service/logs:/app/logs          # if you log to file
+    depends_on:
+      - mongo
+      - kafka
+    # Note: No 'environment' here since env vars are in Dockerfile
+
 volumes:
   mongo-data:
