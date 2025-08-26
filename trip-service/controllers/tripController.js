@@ -188,3 +188,70 @@ exports.editTripController = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getMyCreatedTripsController = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    logger.info(`Fetching trips created by user: ${userId}`);
+
+    const trips = await Trip.find({ createdBy: userId });
+    logger.debug(`Found ${trips.length} trip(s) created by ${userId}`);
+
+    res.status(200).json({ trips });
+  } catch (err) {
+    logger.error('Error retrieving user-created trips', err);
+    next(err);
+  }
+};
+
+exports.getMyParticipatingTripsController = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    logger.info(`Fetching trips where user is a participant: ${userId}`);
+
+    const trips = await Trip.find({ 'peoples.userId': userId });
+    logger.debug(`Found ${trips.length} trip(s) where ${userId} is a participant`);
+
+    res.status(200).json({ trips });
+  } catch (err) {
+    logger.error('Error retrieving trips user participates in', err);
+    next(err);
+  }
+};
+
+
+
+exports.getTripByIdController = async (req, res, next) => {
+  try {
+    const tripId = req.params.id;
+    const userId = req.user._id;
+
+    logger.info(`Fetching trip by id: ${tripId} for user: ${userId}`);
+
+    // Validate trip ID format
+    if (!tripId || tripId.length !== 24) {
+      logger.warn(`Invalid or missing trip ID in request params: ${tripId}`);
+      throw new HttpError('Invalid trip ID format', 400);
+    }
+
+    // Find the trip where user is creator or participant
+    const trip = await Trip.findOne({
+      _id: tripId,
+      $or: [
+        { createdBy: userId },
+        { 'peoples.userId': userId }
+      ]
+    });
+
+    if (!trip) {
+      logger.warn(`Trip not found or user ${userId} not authorized to access: ${tripId}`);
+      throw new HttpError('Trip not found or unauthorized', 404);
+    }
+
+    logger.debug(`Trip found: ${JSON.stringify(trip)}`);
+    res.status(200).json({ trip });
+  } catch (err) {
+    logger.error('Error retrieving trip by id', err);
+    next(err);
+  }
+};
