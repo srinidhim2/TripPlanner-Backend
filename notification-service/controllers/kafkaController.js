@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { runConsumer } = require('../utils/kafkaConsumer');
 const Notification = require('../models/Notification');
-const logger = require('../logger/logger')
+const { logger } = require('../logger/logger')
 console.log('Starting Notification Service...');
 console.log('process.env.NOTIFICATION_DB_URL:', process.env.NOTIFICATION_DB_URL);
 runConsumer(process.env.FRIEND_REQUEST_TOPIC, async (event) => {
