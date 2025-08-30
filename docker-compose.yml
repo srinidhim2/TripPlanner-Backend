@@ -71,6 +71,19 @@ services:
       - kafka
     # Note: No 'environment' here since env vars are in Dockerfile
 
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "3006:3006"
+    depends_on:
+      - user-service
+      - trip-service
+      - notification-service
+    volumes:
+      - ./api-gateway/logs:/app/logs
 
 volumes:
   mongo-data:
