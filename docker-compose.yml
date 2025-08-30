@@ -71,5 +71,6 @@ services:
       - kafka
     # Note: No 'environment' here since env vars are in Dockerfile
 
+
 volumes:
   mongo-data:

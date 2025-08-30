@@ -1,6 +1,6 @@
 // utils/kafkaConsumer.js
 const { Kafka } = require('kafkajs');
-
+const {logger} = require('../logger/logger');
 const kafka = new Kafka({
   clientId: 'notification-service',
   brokers: ['kafka:9092'],
