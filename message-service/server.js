@@ -7,7 +7,7 @@ app.get('/', (req, res) => {
     res.send('Message Service is running')
 })
 
-const PORT = process.env.MESSAGE_SERVICE_PORT || 4000
+const PORT = process.env.MESSAGE_SERVICE_PORT || 3007
 app.listen(PORT, () => {
     console.log(`Message Service is listening on port ${PORT}`)
 })
