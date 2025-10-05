@@ -10,6 +10,8 @@ const bcrypt = require('bcryptjs');
 const FriendRequest = require('../models/FriendRequest');
 require('dotenv').config();
 const HttpError = require('../utils/httpError');
+const Redis = require('ioredis');
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379'); 
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 const FRIEND_REQUEST_TOPIC = process.env.FRIEND_REQUEST_TOPIC
@@ -211,31 +213,41 @@ exports.loginController = async (req, res) => {
 };
 
 exports.logoutController = async (req, res) => {
-    let token = null;
-    if (req.cookies && req.cookies.token) {
-        console.log('Token found in cookies');
-        logger.debug('Token found in cookies');
-        token = req.cookies.token;
-    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-        token = req.headers.authorization.split(' ')[1];
+  let token = null;
+  if (req.cookies && req.cookies.token) {
+    console.log('Token found in cookies');
+    logger.debug('Token found in cookies');
+    token = req.cookies.token;
+  } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+  if (!token) {
+    return res.status(400).json({ error: 'No token provided for logout' });
+  }
+  try {
+    // Decode token to get user ID and expiry
+    const decoded = jwt.decode(token);
+    if (!decoded || !decoded.exp || !decoded.id) {
+      return res.status(400).json({ error: 'Invalid token' });
     }
-    if (!token) {
-        return res.status(400).json({ error: 'No token provided for logout' });
-    }
-    try {
-        // Decode token to get expiry
-        const decoded = jwt.decode(token);
-        if (!decoded || !decoded.exp) {
-            return res.status(400).json({ error: 'Invalid token' });
-        }
-        const expiresAt = new Date(decoded.exp * 1000);
-        await BlacklistedToken.create({ token, expiresAt });
-        res.clearCookie('token');
-        logger.info('Logout successful, token blacklisted');
-        res.status(200).json({ message: 'Logout successful' });
-    } catch (err) {
-        logger.error('Error during logout:', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-};
 
+    const userId = decoded.id;
+    const expiresAt = new Date(decoded.exp * 1000);
+
+    // Blacklist token to prevent reuse
+    await BlacklistedToken.create({ token, expiresAt });
+
+    // Delete user cache from Redis
+    const cacheKey = `user:${userId}`;
+    await redis.del(cacheKey);
+    logger.info(`Redis cache cleared for user ${userId} on logout`);
+
+    // Clear cookie
+    res.clearCookie('token');
+    logger.info('Logout successful, token blacklisted');
+    res.status(200).json({ message: 'Logout successful' });
+  } catch (err) {
+    logger.error('Error during logout:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
