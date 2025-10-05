@@ -85,5 +85,16 @@ services:
     volumes:
       - ./api-gateway/logs:/app/logs
 
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
+
 volumes:
   mongo-data:
+  redis-data:
