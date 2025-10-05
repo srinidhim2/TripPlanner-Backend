@@ -7,16 +7,47 @@ const { sendKafkaMessage } = require('../utils/kafkaProducer');
 require('dotenv').config();
 const { verifyUserExists } = require('../utils/userUtils');
 
+// Joi schema for a single schedule
+const scheduleJoiSchema = Joi.object({
+  id: Joi.string().required(),
+  status: Joi.string().valid('pending', 'completed', 'cancelled').required(),
+  completedOn: Joi.date().optional(),
+  targetTime: Joi.date().required()
+});
+
+// Joi schema for schedules array
+const schedulesJoiArray = Joi.array().items(scheduleJoiSchema);
+
+const tripUpdateSchema = Joi.object({
+  name: Joi.string().trim().optional(),
+  startDate: Joi.string().isoDate().optional(),
+  endDate: Joi.string().isoDate().optional(),
+  schedules: schedulesJoiArray.optional(),
+  places: Joi.array().items(Joi.string().trim()).optional(),
+  peoples: Joi.array().items(
+    Joi.object({
+      userId: Joi.string().length(24).hex().required(),
+      role: Joi.string().valid('admin', 'member', 'guest').required(),
+      status: Joi.string().valid('accept', 'decline', 'tentative').optional().default('tentative'),
+    })
+  ).optional()
+}).min(1);  // Require at least one field to update
+// const Joi = require('joi');
+// const axios = require('axios');
+// const Trip = require('../models/Trip');
+// const HttpError = require('../utils/httpError');
+// const { logger } = require('../logger/logger');
+// const { sendKafkaMessage } = require('../utils/kafkaProducer');
+// require('dotenv').config();
+// const { verifyUserExists } = require('../utils/userUtils');
+
 const TRIP_PLANNER_TOPIC = process.env.TRIP_PLANNER_TOPIC || 'trip-planner';
 
 const tripSchema = Joi.object({
   name: Joi.string().trim().required(),
   startDate: Joi.string().isoDate().required(),
   endDate: Joi.string().isoDate().required(),
-  schedules: Joi.object().pattern(
-    Joi.string(),
-    Joi.string().isoDate()
-  ).optional(),
+  schedules: schedulesJoiArray.optional(),
   places: Joi.array().items(Joi.string().trim()).optional(),
   peoples: Joi.array().items(
     Joi.object({
@@ -92,23 +123,118 @@ exports.createTripController = async (req, res, next) => {
 };
 
 
-const tripUpdateSchema = Joi.object({
-  name: Joi.string().trim().optional(),
-  startDate: Joi.string().isoDate().optional(),
-  endDate: Joi.string().isoDate().optional(),
-  schedules: Joi.object().pattern(
-    Joi.string(),
-    Joi.string().isoDate()
-  ).optional(),
-  places: Joi.array().items(Joi.string().trim()).optional(),
-  peoples: Joi.array().items(
-    Joi.object({
-      userId: Joi.string().length(24).hex().required(),
-      role: Joi.string().valid('admin', 'member', 'guest').required(),
-      status: Joi.string().valid('accept', 'decline', 'tentative').optional().default('tentative'),
-    })
-  ).optional()
-}).min(1);  // Require at least one field to update
+// Add a schedule to a trip
+exports.addScheduleController = async (req, res, next) => {
+  try {
+    const tripId = req.params.id;
+    const { error, value } = scheduleJoiSchema.validate(req.body);
+    if (error) {
+      logger.error('Schedule validation error:', error.details[0].message);
+      return next(new HttpError(error.details[0].message, 400));
+    }
+    const trip = await Trip.findByIdAndUpdate(
+      tripId,
+      { $push: { schedules: value } },
+      { new: true }
+    );
+    if (!trip) {
+      logger.warn('Trip not found for adding schedule');
+      return next(new HttpError('Trip not found', 404));
+    }
+    logger.info(`Schedule added to trip ${tripId}`);
+    res.status(201).json({ message: 'Schedule added', trip });
+  } catch (err) {
+    logger.error('Error adding schedule', err);
+    next(err);
+  }
+};
+
+// Update a schedule by scheduleId
+exports.updateScheduleController = async (req, res, next) => {
+  try {
+    const tripId = req.params.id;
+    const scheduleId = req.params.scheduleId;
+
+    // Validate the incoming body partially using Joi schema with presence 'optional'
+    const { error, value } = scheduleJoiSchema.fork(
+      ['id', 'status', 'completedOn', 'targetTime'], field => field.optional()
+    ).validate(req.body);
+
+    if (error) {
+      logger.error('Schedule validation error:', error.details[0].message);
+      return next(new HttpError(error.details[0].message, 400));
+    }
+
+    // Find the trip by id
+    const trip = await Trip.findById(tripId);
+    if (!trip) {
+      logger.warn('Trip not found for updateSchedule');
+      return next(new HttpError('Trip not found', 404));
+    }
+
+    // Find the schedule to update
+    const scheduleIndex = trip.schedules.findIndex(s => s.id === scheduleId);
+    if (scheduleIndex === -1) {
+      logger.warn('Schedule not found in trip for update');
+      return next(new HttpError('Schedule not found', 404));
+    }
+
+    // Update only provided fields for the schedule
+    Object.keys(value).forEach(key => {
+      trip.schedules[scheduleIndex][key] = value[key];
+    });
+
+    // Save updated trip
+    const updatedTrip = await trip.save();
+    logger.info(`Schedule ${scheduleId} updated in trip ${tripId}`);
+
+    res.status(200).json({ message: 'Schedule updated', trip: updatedTrip });
+  } catch (err) {
+    logger.error('Error updating schedule', err);
+    next(err);
+  }
+};
+
+
+// Get all schedules for a trip
+exports.getAllSchedulesController = async (req, res, next) => {
+  try {
+    const tripId = req.params.id;
+    const trip = await Trip.findById(tripId);
+    if (!trip) {
+      logger.warn('Trip not found for getAllSchedules');
+      return next(new HttpError('Trip not found', 404));
+    }
+    res.status(200).json({ schedules: trip.schedules });
+  } catch (err) {
+    logger.error('Error fetching schedules', err);
+    next(err);
+  }
+};
+
+// Get a schedule by scheduleId
+exports.getScheduleByIdController = async (req, res, next) => {
+
+  try {
+    const tripId = req.params.id;
+    const scheduleId = req.params.scheduleId;
+    const trip = await Trip.findById(tripId);
+    if (!trip) {
+      logger.warn('Trip not found for getScheduleById');
+      return next(new HttpError('Trip not found', 404));
+    }
+    const schedule = trip.schedules.find(s => s.id === scheduleId);
+    if (!schedule) {
+      logger.warn('Schedule not found in trip');
+      return next(new HttpError('Schedule not found', 404));
+    }
+    res.status(200).json({ schedule });
+  } catch (err) {
+    logger.error('Error fetching schedule by id', err);
+    next(err);
+  }
+};
+
 
 exports.editTripController = async (req, res, next) => {
   try {
