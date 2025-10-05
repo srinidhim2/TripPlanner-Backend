@@ -6,7 +6,7 @@ const { logger } = require('../logger/logger');
 const { sendKafkaMessage } = require('../utils/kafkaProducer');
 require('dotenv').config();
 const { verifyUserExists } = require('../utils/userUtils');
-
+// const sen
 // Joi schema for a single schedule
 const scheduleJoiSchema = Joi.object({
   id: Joi.string().required(),
