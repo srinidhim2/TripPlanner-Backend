@@ -19,7 +19,7 @@ ENV JWT_SECRET=123
 ENV TRIP_PLANNER_TOPIC=trip-planner
 ENV USER_SERVICE_URL=http://user-service:3003
 ENV LOG_LEVEL=debug
-
+ENV REDIS_URL=redis://redis:6379
 # ENV FRIEND_REQUEST_TOPIC=friend-request
 # Expose port (from .env or default 3000)
 EXPOSE 3005
