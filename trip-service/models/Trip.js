@@ -1,5 +1,12 @@
 const mongoose = require('mongoose');
 
+const scheduleSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  status: { type: String, enum: ['pending', 'completed', 'cancelled'], required: true, default: 'pending' },
+  completedOn: { type: Date },
+  targetTime: { type: Date, required: true }
+}, { _id: false });
+
 const tripSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -7,17 +14,14 @@ const tripSchema = new mongoose.Schema({
     trim: true
   },
   startDate: {
-    type: Date,              // Will store as timestamp (JS Date)
+    type: Date,
     required: true
   },
   endDate: {
-    type: Date,              // Will store as timestamp
+    type: Date,
     required: true
   },
-  schedules: {
-    type: Map,               // Key-value pairs (e.g., meetupTime: Date)
-    of: Date                 // Each value in the map is a Date/timestamp
-  },
+  schedules: [scheduleSchema],
   places: [
     {
       type: String,
@@ -34,7 +38,7 @@ const tripSchema = new mongoose.Schema({
       userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
       role: { 
         type: String, 
-        enum: ['admin', 'member', 'guest'], // Enum for roles
+        enum: ['admin', 'member', 'guest'],
         required: true 
       },
       status: { 
