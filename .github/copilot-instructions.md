@@ -55,3 +55,10 @@ This repository is for a **Trip Service** application.
 - This project is being developed for a **trip service** platform.
 - Maintain clean, readable, and well-documented code.
 - Follow best practices for error handling and logging in all controllers and services.
+
+## Documentation
+- Ensure that all functions, classes, and modules are well-documented with comments.
+- Create a folder named docs in the root directory to store additional documentation files if necessary.
+- in docs folder create a md file for all api curl requesta with headers and body
+- and explain the apis in detail
+- add api curl requests in the md file docs/api_curl_requests.md even when new api is created
