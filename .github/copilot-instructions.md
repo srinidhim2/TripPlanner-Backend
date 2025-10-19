@@ -26,7 +26,7 @@ This repository is for a **Trip Service** application.
 - Maintain clean, readable, and well-documented code.
 - Follow best practices for error handling and logging in all controllers and services.
 
-```// filepath: /home/srinidhi/Code/TripPlanner/TP-backend/.github/copilot-instruction.md
+```// filepath: /home/srinidhi/Code/TripPlanner/TP-backend/.github/copilot-instruction.md```
 
 # Copilot Instructions for Trip Service Project
 
