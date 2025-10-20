@@ -14,6 +14,8 @@ services:
     depends_on:
       - mongo
       - kafka
+    networks:
+      - tripnet
   
   notification-service:
     build:
@@ -27,6 +29,8 @@ services:
     depends_on:
       - mongo
       - kafka
+    networks:
+      - tripnet
   mongo:
     image: mongo:6.0
     container_name: mongo
@@ -34,6 +38,8 @@ services:
       - "27019:27017"
     volumes:
       - mongo-data:/data/db
+    networks:
+      - tripnet
   kafka:
     image: bitnami/kafka:3.6.0
     container_name: kafka
@@ -47,6 +53,8 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
+    networks:
+      - tripnet
     
   zookeeper:
     image: bitnami/zookeeper:3.8.1
@@ -55,6 +63,8 @@ services:
       - "2181:2181"
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - tripnet
 
   trip-service:
     build:
@@ -70,6 +80,77 @@ services:
       - mongo
       - kafka
     # Note: No 'environment' here since env vars are in Dockerfile
+    networks:
+      - tripnet
+
+  connect:
+    build:
+      context: ./kafka-connect
+      dockerfile: Dockerfile
+    image: tripplanner/kafka-connect:opensearch
+    container_name: kafka-connect
+    ports:
+      - "8083:8083"
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=connect-configs
+      - OFFSET_STORAGE_TOPIC=connect-offsets
+      - STATUS_STORAGE_TOPIC=connect-status
+      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
+      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
+      - CONNECT_REST_ADVERTISED_HOST_NAME=connect
+      - CONNECT_PLUGIN_PATH=/kafka/connect
+    depends_on:
+      - kafka
+    networks:
+      - tripnet
+
+  opensearch:
+    image: opensearchproject/opensearch:2.9.0
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - plugins.security.disabled=false
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=admin
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    networks:
+      - tripnet
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.9.0
+    container_name: opensearch-dashboards
+    ports:
+      - "5601:5601"
+    environment:
+      # Connect to OpenSearch over HTTPS (security plugin uses demo certs)
+      - OPENSEARCH_HOSTS=https://opensearch:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=admin
+      # Allow insecure/demo certificates for local development
+      - OPENSEARCH_SSL_VERIFICATIONMODE=none
+    depends_on:
+      - opensearch
+    networks:
+      - tripnet
 
 volumes:
   mongo-data:
+  opensearch-data:
+
+networks:
+  tripnet:
+    driver: bridge

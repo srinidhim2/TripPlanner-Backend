@@ -1,0 +1,21 @@
+{
+  "name": "opensearch-sink-connector",
+  "config": {
+    "connector.class": "io.confluent.connect.opensearch.OpensearchSinkConnector",
+    "tasks.max": "1",
+    "topics": "trip-planner,friend-request,notification-events",
+    "connection.url": "http://opensearch:9200",
+    "type.name": "_doc",
+    "key.ignore": "true",
+    "schema.ignore": "true",
+    "behavior.on.null.values": "delete",
+    "max.retries": "5",
+    "retry.backoff.ms": "1000",
+    "transforms": "RenameTopic",
+    "transforms.RenameTopic.type": "org.apache.kafka.connect.transforms.ReplaceField$Value",
+    "transforms.RenameTopic.whitelist": "*",
+  "transforms.RenameTopic.renames": "",
+  "note": "Set \"transforms.RenameTopic.renames\" to a comma-separated list of rename expressions like \"oldTopic:newIndex,oldField:newField\" or keep empty if no renames needed",
+    "flush.size": "1000"
+  }
+}
