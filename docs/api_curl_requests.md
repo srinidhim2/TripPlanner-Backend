@@ -1,151 +1,236 @@
-# API cURL Examples for TripPlanner Backend
+# API cURL Requests (generated from Postman collection)
 
-Replace `localhost:3003` with your user service host, and `localhost:3004` with your trip service host if different.
+This file contains cURL equivalents for the Postman collection `TripPlanner.postman_collection.json` organized by service and endpoint.
 
-## Authentication
+Replace the host variables before running (`{{trip_planner_host}}`, `{{trip_planner_host_TP}}`, `{{trip_planner_host_NS}}`, `{{trip_planner_token}}`).
 
-Login (User service)
+## User Service (assume host: http://localhost:3003)
+
+### Create User
+
+```bash
+curl -X POST http://localhost:3003/user/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John 15",
+    "dateOfBirth": "1990-05-15",
+    "email": "john.doe0@example.com",
+    "phone": "9876543210",
+    "gender": "male",
+    "password": "password"
+  }'
+```
+
+### Upload Profile Photo
+
+```bash
+curl -X POST http://localhost:3003/user/68a147108c4cfde7220a7116/photo \
+  -H "Authorization: Bearer <token>" \
+  -F "profilePhoto=@/path/to/Royal-Enfield-Guerrilla-450-6.jpg"
+```
+
+### Get User by ID
+
+```bash
+curl -X GET http://localhost:3003/user/68a219dfbce3ba773f9471f0 \
+  -H "Authorization: Bearer <token>"
+```
+
+### Get Profile Photo
+
+```bash
+curl -X GET http://localhost:3003/user/68a219dfbce3ba773f9471f0/photo \
+  -H "Authorization: Bearer <token>"
+```
+
+### Login (extract token)
 
 ```bash
 curl -X POST http://localhost:3003/user/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"john.doe@example.com","password":"secret123"}'
+  -d '{"email":"john.doe7@example.com","password":"password"}'
 ```
 
-Successful response includes `token`. You can use it as a cookie or Bearer header.
+Note: response contains a JSON with `token`. Save it to use in subsequent requests.
 
-Login using Bearer header
+### Logout
 
-```bash
-curl -X POST http://localhost:3003/user/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"john.doe@example.com","password":"secret123"}'
-```
-
-Logout (use cookie or Bearer header)
+Using header:
 
 ```bash
 curl -X POST http://localhost:3003/user/logout \
-  -H "Authorization: Bearer <token>" \
+  -H "Authorization: Bearer <token>"
+```
+
+Or using cookie:
+
+```bash
+curl -X POST http://localhost:3003/user/logout \
   --cookie "token=<token>"
 ```
 
-## User APIs
-
-Create user
+### Update User
 
 ```bash
-curl -X POST http://localhost:3003/user \
+curl -X PATCH http://localhost:3003/user/ \
   -H "Content-Type: application/json" \
-  -d '{
-    "name":"John Doe",
-    "dateOfBirth":"1990-01-01",
-    "email":"john.doe@example.com",
-    "password":"secret123",
-    "phone":"1234567890",
-    "gender":"male"
-  }'
+  -H "Authorization: Bearer <token>" \
+  -d '{"name":"New Name","phone":"123-456-7890"}'
 ```
 
-Get user (protected)
+
+## Friend APIs (User service)
+
+### Send Friend Request
 
 ```bash
-curl -X GET http://localhost:3003/user/<userId> \
+curl -X POST http://localhost:3003/friend/sendRequest \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"partyB":"68b2b94451ed1536821e836d"}'
+```
+
+### Show Received Requests
+
+```bash
+curl -X GET http://localhost:3003/friend/showRequests \
   -H "Authorization: Bearer <token>"
 ```
 
-Upload profile photo
+### Respond to Request
 
 ```bash
-curl -X POST http://localhost:3003/user/<userId>/photo \
+curl -X PATCH http://localhost:3003/friend/respondToRequest/68a4a54a8ae6f7d995b327e4 \
+  -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
-  -F "profilePhoto=@/path/to/photo.jpg"
+  -d '{"action":"accept"}'
 ```
 
-## Trip APIs (Trip service)
-
-Create trip
+### Show Friends
 
 ```bash
-curl -X POST http://localhost:3004/trip/createTrip \
+curl -X GET http://localhost:3003/friend/showFriends \
+  -H "Authorization: Bearer <token>"
+```
+
+### Remove Friend
+
+```bash
+curl -X DELETE http://localhost:3003/friend/removeFriend/68b2b94451ed1536821e836d \
+  -H "Authorization: Bearer <token>"
+```
+
+
+## Notification Service (assume host: http://localhost:3005)
+
+### Get all notifications
+
+```bash
+curl -X GET http://localhost:3005/notifications/ \
+  -H "Authorization: Bearer <token>"
+```
+
+### Toggle notification read state
+
+```bash
+curl -X PATCH http://localhost:3005/notifications/68a868d256473ac20db9c2fe/toggle \
+  -H "Authorization: Bearer <token>"
+```
+
+### Change read status for all notifications
+
+```bash
+curl -X PATCH http://localhost:3005/notifications/all \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
+  -d '{"read": false}'
+```
+
+
+## Trip Service (assume host: http://localhost:3004)
+
+### Create Trip
+
+```bash
+curl -X POST http://localhost:3004/createTrip \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
   -d '{
-    "name":"Weekend Trip",
-    "startDate":"2025-10-20T09:00:00Z",
-    "endDate":"2025-10-21T18:00:00Z",
-    "schedules": [
-      {"id":"s1","status":"pending","targetTime":"2025-10-20T10:00:00Z"}
+    "name":"Goa Adventure",
+    "startDate":"2025-09-10T10:00:00.000Z",
+    "endDate":"2025-09-15T20:00:00.000Z",
+    "schedules":[
+      {"id":"meetup-001","status":"pending","targetTime":"2025-09-10T08:00:00.000Z"},
+      {"id":"ride-start-001","status":"pending","targetTime":"2025-09-10T09:00:00.000Z"}
     ],
-    "places":["Park","Cafe"],
-    "peoples":[{"userId":"68a4a5418ae6f7d995b327dd","role":"organizer"}]
+    "places":["Home","Baga Beach","Fort"],
+    "peoples":[{"userId":"68a147108c4cfde7220a7116","role":"member","status":"tentative"}]
   }'
 ```
 
-Add schedule to trip
+### Edit Trip
 
 ```bash
-curl -X POST http://localhost:3004/trip/<tripId>/schedules \
-  -H "Authorization: Bearer <token>" \
+curl -X PATCH http://localhost:3004/updateTrip/68acc250e07737f215ad77b9 \
   -H "Content-Type: application/json" \
-  -d '{"id":"s2","status":"pending","targetTime":"2025-10-20T13:00:00Z"}'
-```
-
-Update schedule
-
-```bash
-curl -X PATCH http://localhost:3004/trip/<tripId>/schedules/<scheduleId> \
   -H "Authorization: Bearer <token>" \
+  -d '{"name":"Goa Adventure 1"}'
+```
+
+### Get Trips Created By Me
+
+```bash
+curl -X GET http://localhost:3004/getTrip/createdByMe \
+  -H "Authorization: Bearer <token>"
+```
+
+### Get Trips I Participate In
+
+```bash
+curl -X GET http://localhost:3004/getTrip/all \
+  -H "Authorization: Bearer <token>"
+```
+
+### Get Trip by ID
+
+```bash
+curl -X GET http://localhost:3004/getTrip/68acbd4497066b59dcbde3fb \
+  -H "Authorization: Bearer <token>"
+```
+
+### Get all schedules by trip id
+
+```bash
+curl -X GET http://localhost:3004/68e26ff2bad025af321a6393/schedules \
+  -H "Authorization: Bearer <token>"
+```
+
+### Add Schedule
+
+```bash
+curl -X POST http://localhost:3004/68e26ff2bad025af321a6393/schedules \
   -H "Content-Type: application/json" \
-  -d '{"id":"s2","status":"completed","completedOn":"2025-10-20T14:00:00Z","targetTime":"2025-10-20T13:00:00Z"}'
-```
-
-Get all schedules
-
-```bash
-curl -X GET http://localhost:3004/trip/<tripId>/schedules \
-  -H "Authorization: Bearer <token>"
-```
-
-Get schedule by id
-
-```bash
-curl -X GET http://localhost:3004/trip/<tripId>/schedules/<scheduleId> \
-  -H "Authorization: Bearer <token>"
-```
-
-## Notification Service APIs (assumes notification service on port 3005)
-
-Get all notifications
-
-```bash
-curl -X GET http://localhost:3005/notifications \
-  -H "Authorization: Bearer <token>"
-```
-
-Get read notifications
-
-```bash
-curl -X GET http://localhost:3005/notifications/read \
-  -H "Authorization: Bearer <token>"
-```
-
-Toggle notification read state
-
-```bash
-curl -X PATCH http://localhost:3005/notifications/<notificationId>/toggle \
-  -H "Authorization: Bearer <token>"
-```
-
-Mark all notifications read/unread
-
-```bash
-curl -X PATCH http://localhost:3005/notifications/markAll \
   -H "Authorization: Bearer <token>" \
+  -d '{"id":"schedule123","status":"pending","targetTime":"2025-10-06T10:30:00.000Z"}'
+```
+
+### Update Schedule
+
+```bash
+curl -X PATCH http://localhost:3004/68e26ff2bad025af321a6393/schedules/schedule123 \
   -H "Content-Type: application/json" \
-  -d '{"read": true}'
+  -H "Authorization: Bearer <token>" \
+  -d '{"id":"schedule123","status":"completed","targetTime":"2025-10-05T10:30:00.000Z","completedOn":"2025-10-05T18:45:00.000Z"}'
+```
+
+### Get Schedule By Id
+
+```bash
+curl -X GET http://localhost:3004/68e26ff2bad025af321a6393/schedules/schedule123 \
+  -H "Authorization: Bearer <token>"
 ```
 
 
 ---
-Generated by reading project controllers and routes. Update hosts/ports as necessary.
+
+*Generated from Postman collection located at `/home/srinidhi/Documents/TripPlanner.postman_collection.json`.*
